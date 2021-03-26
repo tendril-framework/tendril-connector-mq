@@ -38,13 +38,14 @@ class ThroughputTest(service.Service, TwistedLoggerMixin):
         self._read_index = 0
         while True:
             yield self.write()
-            yield deferLater(reactor, 0.001, lambda: None)
+            yield deferLater(reactor, 0.03, lambda: None)
 
     def write(self):
-        # self.log.info("Publishing {index}", index=self._write_index)
+        self.log.info("Publishing {index}, WQ Length: {wql} Current RI {ri}",
+                      index=self._write_index, ri=self._read_index, wql=len(self.amqp.queued_messages))
         msg = json.dumps({'index': self._write_index})
-        self.amqp.send_message("testing.topic", 'throughput', msg)
         self._write_index += 1
+        return self.amqp.send_message("testing.topic", 'throughput', msg)
 
     def read(self, msg):
         ri = json.loads(msg.body)['index']
