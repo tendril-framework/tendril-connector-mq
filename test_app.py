@@ -1,35 +1,57 @@
 
 
 import json
+
+from twisted.internet import reactor
 from twisted.application import service
+from twisted.internet.task import deferLater
+from twisted.internet.defer import inlineCallbacks
 
 from tendril.asynchronous.services.mq import PikaService
 from tendril.asynchronous.services.mq import default_pika_parameters
 
 from tendril.asynchronous.utils.logger import TwistedLoggerMixin
-from tendril.config import MQ_SERVER_EXCHANGE
 
-_application_name = "engine-storage-influxdb"
+_application_name = "throughput-test"
 application = service.Application(_application_name)
 
 ps = PikaService(default_pika_parameters())
 ps.setServiceParent(application)
 
 
-class InfluxDBStorageEngine(service.Service, TwistedLoggerMixin):
+class ThroughputTest(service.Service, TwistedLoggerMixin):
     def __init__(self):
-        super(InfluxDBStorageEngine, self).__init__()
+        super(ThroughputTest, self).__init__()
         self.amqp = None
-
-    def respond(self, msg):
-        self.log.info(json.loads(msg.body)['equipmentName'])
-        self.amqp.send_message(MQ_SERVER_EXCHANGE, 'rabbitwisted', msg.body)
+        self._write_index = 0
+        self._read_index = 0
 
     def startService(self):
-        amqp_service = self.parent.getServiceNamed("amqp") # pylint: disable=E1111,E1121
+        amqp_service = self.parent.getServiceNamed("amqp")  # pylint: disable=E1111,E1121
         self.amqp = amqp_service.getFactory()
-        self.amqp.read_messages(MQ_SERVER_EXCHANGE, "monitoring.#", self.respond)
+        self.amqp.read_messages("testing.topic", "throughput", self.read)
+        deferLater(reactor, 5, self.dataGenerator)
+
+    @inlineCallbacks
+    def dataGenerator(self):
+        self._write_index = 0
+        self._read_index = 0
+        while True:
+            yield self.write()
+            yield deferLater(reactor, 0.001, lambda: None)
+
+    def write(self):
+        # self.log.info("Publishing {index}", index=self._write_index)
+        msg = json.dumps({'index': self._write_index})
+        self.amqp.send_message("testing.topic", 'throughput', msg)
+        self._write_index += 1
+
+    def read(self, msg):
+        ri = json.loads(msg.body)['index']
+        if not ri == self._read_index:
+            self.log.error("Expecting {exp}, Got {index}", index=ri, exp=self._read_index)
+        self._read_index += 1
 
 
-ts = InfluxDBStorageEngine()
+ts = ThroughputTest()
 ts.setServiceParent(application)
