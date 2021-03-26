@@ -30,7 +30,8 @@ def read(fname):
 
 core_dependencies = [
     'tendril-config',
-    'pika'
+    'pika',
+    'twisted',
 ]
 
 install_requires = core_dependencies + ['wheel']
