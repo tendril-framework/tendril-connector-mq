@@ -172,7 +172,7 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
             exchange_type=ExchangeType.topic,
             durable=True,
             auto_delete=False)
-        prop = spec.BasicProperties(delivery_mode=2)
+        prop = spec.BasicProperties(delivery_mode=1)
         try:
             yield self._channel.basic_publish(
                 exchange=exchange,
