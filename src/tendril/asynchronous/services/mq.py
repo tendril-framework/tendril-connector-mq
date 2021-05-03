@@ -136,11 +136,11 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
             channel,
             deliver,
             _props,
-            msg,
+            message,
         ) = item
 
-        # log.msg(
-        #     '%s (%s): %s' % (deliver.exchange, deliver.routing_key, repr(msg)),
+        # log.message(
+        #     '%s (%s): %s' % (deliver.exchange, deliver.routing_key, repr(message)),
         #     system='Pika:<=')
         d = defer.maybeDeferred(callback, item)
         d.addCallbacks(lambda _: channel.basic_ack(deliver.delivery_tag),
@@ -156,29 +156,35 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
             while self.factory.queued_messages:
                 (
                     exchange,
-                    r_key,
+                    routing_key,
                     message,
+                    properties,
                 ) = self.factory.queued_messages.pop(0)
-                self.send_message(exchange, r_key, message)
+                self.send_message(exchange, routing_key, message, properties)
 
     @inlineCallbacks
-    def send_message(self, exchange, routing_key, msg):
+    def send_message(self, exchange, routing_key, message, properties=None):
         """Send a single message."""
-        # log.msg(
-        #     '%s (%s): %s' % (exchange, routing_key, repr(msg)),
+        # log.message(
+        #     '%s (%s): %s' % (exchange, routing_key, repr(message)),
         #     system='Pika:=>')
         yield self._channel.exchange_declare(
             exchange=exchange,
             exchange_type=ExchangeType.topic,
             durable=True,
             auto_delete=False)
-        prop = spec.BasicProperties(delivery_mode=1)
+
+        if properties is None:
+            properties = {}
+        properties.setdefault('delivery_mode', 1)
+        _properties = spec.BasicProperties(**properties)
+
         try:
             yield self._channel.basic_publish(
                 exchange=exchange,
                 routing_key=routing_key,
-                body=msg,
-                properties=prop)
+                body=message,
+                properties=_properties)
         except Exception as error:  # pylint: disable=W0703
             self.log.error('Error while sending message: %s' % error, system=self.name)
 
@@ -212,8 +218,8 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
         protocol.ReconnectingClientFactory.clientConnectionFailed(
             self, connector, reason)
 
-    def send_message(self, exchange=None, routing_key=None, message=None):
-        self.queued_messages.append((exchange, routing_key, message))
+    def send_message(self, exchange, routing_key, message, properties=None):
+        self.queued_messages.append((exchange, routing_key, message, properties))
         if self.client is not None:
             self.client.send()
 
