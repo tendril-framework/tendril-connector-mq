@@ -176,7 +176,7 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
 
         if properties is None:
             properties = {}
-        properties.setdefault('delivery_mode', 1)
+        properties.setdefault('delivery_mode', 2)
         _properties = spec.BasicProperties(**properties)
 
         try:
