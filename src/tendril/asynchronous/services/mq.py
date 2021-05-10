@@ -231,8 +231,7 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
 
 
 def default_pika_parameters():
-    return pika.ConnectionParameters(
-        host=MQ_SERVER_HOST,
-        port=MQ_SERVER_PORT,
-        virtual_host=MQ_SERVER_VIRTUALHOST,
-        credentials=pika.PlainCredentials(MQ_SERVER_USERNAME, MQ_SERVER_PASSWORD))
+    return pika.ConnectionParameters(host=MQ_SERVER_HOST,
+                                     port=MQ_SERVER_PORT,
+                                     virtual_host=MQ_SERVER_VIRTUALHOST,
+                                     credentials=pika.PlainCredentials(MQ_SERVER_USERNAME, MQ_SERVER_PASSWORD))
