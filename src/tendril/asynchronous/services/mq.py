@@ -39,6 +39,7 @@ class PikaService(service.MultiService, TwistedLoggerMixin):
     name = 'amqp'
 
     def __init__(self, parameter):
+        TwistedLoggerMixin.__init__(self)
         service.MultiService.__init__(self)
         self.parameters = parameter
 
@@ -78,6 +79,7 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
 
     def __init__(self, factory, parameters):
         self._channel = None
+        TwistedLoggerMixin.__init__(self)
         super(PikaProtocol, self).__init__(parameters)
         self.factory = factory
 
@@ -193,6 +195,8 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
     name = 'AMQP:Factory'
 
     def __init__(self, parameters):
+        TwistedLoggerMixin.__init__(self)
+        super(PikaFactory, self).__init__()
         self.parameters = parameters
         self.client = None
         self.queued_messages = []

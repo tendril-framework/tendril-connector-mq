@@ -30,6 +30,7 @@ def read(fname):
 
 core_dependencies = [
     'tendril-config',
+    'tendril-async-utils-core',
     'pika',
     'twisted',
 ]
