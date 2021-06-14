@@ -24,8 +24,7 @@ from tendril.utils.config import ConfigOption
 from tendril.utils import log
 logger = log.get_logger(__name__, log.DEFAULT)
 
-depends = ['tendril.config.core',
-           'tendril.config.mq_core']
+depends = ['tendril.config.core']
 
 
 def _rabbitmq_config_template(mq_code):
@@ -64,20 +63,22 @@ def _rabbitmq_config_template(mq_code):
             "Whether to use SSL when connecting to "
             "the {} MQ Server.".format(mq_code)
         ),
-        ConfigOption(
-            'MQ{}_SERVER_EXCHANGE'.format(mq_code),
-            "'tendril.topic'",
-            "RabbitMQ Server Exchange to use for the {} MQ Server. "
-            "All MQ Connections from tendril will use this exchange "
-            "unless locally overridden in some as yet unspecified way.".format(mq_code)
-        ),
-    ]
+
+]
+
+
+config_elements_mq_core = [
+    ConfigOption(
+        'MQ_SERVER_CODES',
+        "['']",
+        "RabbitMQ Server Codes, one for each MQ Server for "
+        "which configuration is to be provided. Tendril assumes the "
+        "primary rabbitmq server will have a blank code ('')"
+    )
+]
 
 
 def load(manager):
     logger.debug("Loading {0}".format(__name__))
-    config_elements_mq = []
-    for code in manager.MQ_SERVER_CODES:
-        config_elements_mq += _rabbitmq_config_template(code)
-    manager.load_elements(config_elements_mq,
-                          doc="Tendril RabbitMQ Configuration")
+    manager.load_elements(config_elements_mq_core,
+                          doc="Tendril RabbitMQ Core Configuration")
