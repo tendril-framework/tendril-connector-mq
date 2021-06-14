@@ -19,13 +19,28 @@ Paths Configuration Options
 ===========================
 """
 
+import pika
 
 from tendril.utils.config import ConfigOption
+from tendril.utils.config import ConfigOptionConstruct
 from tendril.utils import log
 logger = log.get_logger(__name__, log.DEFAULT)
 
 depends = ['tendril.config.core',
            'tendril.config.mq_core']
+
+
+class RabbitMQConnectionParameters(ConfigOptionConstruct):
+    @property
+    def value(self):
+        return pika.ConnectionParameters(
+            host=self.ctx["MQ{}_SERVER_HOST".format(self._parameters)],
+            port=self.ctx["MQ{}_SERVER_PORT".format(self._parameters)],
+            virtual_host=self.ctx["MQ{}_SERVER_VIRTUALHOST".format(self._parameters)],
+            credentials=pika.PlainCredentials(
+                self.ctx["MQ{}_SERVER_USERNAME".format(self._parameters)],
+                self.ctx["MQ{}_SERVER_PASSWORD".format(self._parameters)])
+        )
 
 
 def _rabbitmq_config_template(mq_code):
@@ -71,6 +86,13 @@ def _rabbitmq_config_template(mq_code):
             "All MQ Connections from tendril will use this exchange "
             "unless locally overridden in some as yet unspecified way.".format(mq_code)
         ),
+        RabbitMQConnectionParameters(
+            'MQ{}_SERVER_PARAMETERS'.format(mq_code),
+            mq_code,
+            "Constructed PikaConnection parameters instance. This option "
+            "is created by the code, and should not be set directly in any "
+            "config file."
+        )
     ]
 
 
