@@ -36,12 +36,17 @@ PREFETCH_COUNT = 50
 
 
 class PikaService(service.MultiService, TwistedLoggerMixin):
-    name = 'amqp'
-
-    def __init__(self, parameter):
+    def __init__(self, parameter, postfix=None):
+        self._postfix = postfix
         TwistedLoggerMixin.__init__(self)
         service.MultiService.__init__(self)
         self.parameters = parameter
+
+    @property
+    def name(self):
+        if self._postfix:
+            return 'amqp:{}'.format(self._postfix)
+        return 'amqp'
 
     def startService(self):
         self.connect()
