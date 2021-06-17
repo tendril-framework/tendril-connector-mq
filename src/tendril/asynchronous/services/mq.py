@@ -36,11 +36,17 @@ PREFETCH_COUNT = 50
 
 
 class PikaService(service.MultiService, TwistedLoggerMixin):
-    name = 'amqp'
-
-    def __init__(self, parameter):
+    def __init__(self, parameter, postfix=None):
+        self._postfix = postfix
+        TwistedLoggerMixin.__init__(self)
         service.MultiService.__init__(self)
         self.parameters = parameter
+
+    @property
+    def name(self):
+        if self._postfix:
+            return 'amqp:{}'.format(self._postfix)
+        return 'amqp'
 
     def startService(self):
         self.connect()
@@ -78,6 +84,7 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
 
     def __init__(self, factory, parameters):
         self._channel = None
+        TwistedLoggerMixin.__init__(self)
         super(PikaProtocol, self).__init__(parameters)
         self.factory = factory
 
@@ -183,7 +190,7 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
 
         if properties is None:
             properties = {}
-        properties.setdefault('delivery_mode', 1)
+        properties.setdefault('delivery_mode', 2)
         _properties = spec.BasicProperties(**properties)
 
         try:
@@ -200,6 +207,8 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
     name = 'AMQP:Factory'
 
     def __init__(self, parameters):
+        TwistedLoggerMixin.__init__(self)
+        super(PikaFactory, self).__init__()
         self.parameters = parameters
         self.client = None
         self.queued_messages = []
@@ -238,8 +247,7 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
 
 
 def default_pika_parameters():
-    return pika.ConnectionParameters(
-        host=MQ_SERVER_HOST,
-        port=MQ_SERVER_PORT,
-        virtual_host=MQ_SERVER_VIRTUALHOST,
-        credentials=pika.PlainCredentials(MQ_SERVER_USERNAME, MQ_SERVER_PASSWORD))
+    return pika.ConnectionParameters(host=MQ_SERVER_HOST,
+                                     port=MQ_SERVER_PORT,
+                                     virtual_host=MQ_SERVER_VIRTUALHOST,
+                                     credentials=pika.PlainCredentials(MQ_SERVER_USERNAME, MQ_SERVER_PASSWORD))
