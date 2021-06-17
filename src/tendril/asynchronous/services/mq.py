@@ -99,20 +99,21 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
                 routing_key,
                 callback,
                 queue,
+                exclusive,
                 durable
         ) in self.factory.read_list:
             yield self.setup_read(exchange, routing_key, callback,
-                                  queue, durable)
+                                  queue, exclusive, durable)
         self.send()
 
     @inlineCallbacks
-    def read(self, exchange, routing_key, callback, queue=None, durable=False):
+    def read(self, exchange, routing_key, callback, queue, exclusive, durable):
         """Add an exchange to the list of exchanges to read from."""
         if self.connected:
-            yield self.setup_read(exchange, routing_key, callback, queue, durable)
+            yield self.setup_read(exchange, routing_key, callback, queue, exclusive, durable)
 
     @inlineCallbacks
-    def setup_read(self, exchange, routing_key, callback, queue, durable):
+    def setup_read(self, exchange, routing_key, callback, queue, exclusive, durable):
         """This function does the work to read from an exchange."""
         if exchange:
             yield self._channel.exchange_declare(
@@ -124,8 +125,11 @@ class PikaProtocol(twisted_connection.TwistedProtocolConnection, TwistedLoggerMi
         if not queue:
             queue = routing_key
             durable = True
+            exclusive = False
 
-        yield self._channel.queue_declare(queue=queue, durable=durable)
+        yield self._channel.queue_declare(queue=queue,
+                                          exclusive=exclusive,
+                                          durable=durable)
 
         if exchange:
             yield self._channel.queue_bind(queue=queue, exchange=exchange)
@@ -239,11 +243,11 @@ class PikaFactory(protocol.ReconnectingClientFactory, TwistedLoggerMixin):
         if self.client is not None:
             self.client.send()
 
-    def read_messages(self, exchange, routing_key, callback, queue=None, durable=False):
+    def read_messages(self, exchange, routing_key, callback, queue=None, exclusive=True, durable=False):
         """Configure an exchange to be read from."""
-        self.read_list.append((exchange, routing_key, callback, queue, durable))
+        self.read_list.append((exchange, routing_key, callback, queue, exclusive, durable))
         if self.client is not None:
-            self.client.read(exchange, routing_key, callback, queue, durable)
+            self.client.read(exchange, routing_key, callback, queue, exclusive, durable)
 
 
 def default_pika_parameters():

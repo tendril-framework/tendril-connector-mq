@@ -33,6 +33,8 @@ core_dependencies = [
     'tendril-async-utils-core',
     'pika',
     'twisted',
+    'pyOpenSSL',
+    'service-identity',
 ]
 
 install_requires = core_dependencies + ['wheel']
